@@ -10,12 +10,11 @@ import UIKit
 import AFNetworking
 import MBProgressHUD
 
-class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class MoviesViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate {
 
-    @IBOutlet weak var tableView: UITableView!
-    
-    var movies: [NSDictionary]?
-    
+    @IBOutlet var movieCollectionView: UICollectionView!
+    var movies = [NSDictionary]()
+    var endpoint: String = "";
     
     func refreshControlAction(refreshControl: UIRefreshControl) {
         
@@ -24,7 +23,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         MBProgressHUD.showHUDAddedTo(self.view, animated: true)
         
         let apiKey = "a07e22bc18f5cb106bfe4cc1f83ad8ed"
-        let url = NSURL(string: "https://api.themoviedb.org/3/movie/now_playing?api_key=\(apiKey)")
+        let url = NSURL(string: "https://api.themoviedb.org/3/movie/\(endpoint)?api_key=\(apiKey)")
         let request = NSURLRequest(
             URL: url!,
             cachePolicy: NSURLRequestCachePolicy.ReloadIgnoringLocalCacheData,
@@ -46,7 +45,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
                             //self.tableView.reloadData()
 
                             // Reload the tableView now that there is new data
-                            self.tableView.reloadData()
+                            self.movieCollectionView.reloadData()
                             
                             // Tell the refreshControl to stop spinning
                             refreshControl.endRefreshing()
@@ -62,18 +61,15 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        tableView.dataSource = self
-        tableView.delegate = self
+        movieCollectionView.dataSource = self
+        movieCollectionView.delegate = self
         // Do any additional setup after loading the view.
         
         // Initialize a UIRefreshControl
         let refreshControl = UIRefreshControl()
         refreshControlAction(refreshControl)
         refreshControl.addTarget(self, action: "refreshControlAction:", forControlEvents: UIControlEvents.ValueChanged)
-        tableView.insertSubview(refreshControl, atIndex: 0)
-
-
-        
+        movieCollectionView.insertSubview(refreshControl, atIndex: 0)
     }
 
     override func didReceiveMemoryWarning() {
@@ -81,23 +77,22 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         // Dispose of any resources that can be recreated.
     }
     
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if let movies = movies {
-            // Yes movies has data
-            return movies.count
-
-        } else {
-            return 0
-        }
-    }
+//    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+//        if let movies = movies {
+//            // Yes movies has data
+//            return movies.count
+//
+//        } else {
+//            return 0
+//        }
+//    }
     
     // Row display. Implementers should *always* try to reuse cells by setting each cell's reuseIdentifier and querying for available reusable cells with dequeueReusableCellWithIdentifier:
     // Cell gets various attributes set automatically based on table (separators) and data source (accessory views, editing controls)
     
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+    func collectionView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("MovieCell", forIndexPath: indexPath) as! MovieCell
-        
-        let movie = movies![indexPath.row]
+        let movie = movies[indexPath.row]
         let title = movie["title"] as! String
         let overview = movie["overview"] as! String
         let baseUrl = "http://image.tmdb.org/t/p/w500"
@@ -112,8 +107,6 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         cell.overviewLabel.text = overview
         return cell
     }
-    
-
 
     // MARK: - Navigation
 
@@ -121,12 +114,29 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         // Get the new view controller using segue.destinationViewController.
         // Pass the selected object to the new view controller.
-        let cell = sender as! UITableViewCell
-        let indexPath = tableView.indexPathForCell(cell)
-        let movie = movies![indexPath!.row]
+        let cell = sender as! UICollectionViewCell
+        let indexPath = movieCollectionView.indexPathForCell(cell)
+        let movie = movies[indexPath!.row]
         
         let detailViewController = segue.destinationViewController as! MovieViewController
         detailViewController.movie = movie
+    }
+    
+    func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return movies.count
+    }
+    
+    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        let cell = movieCollectionView.dequeueReusableCellWithReuseIdentifier("MovieCell",forIndexPath: indexPath) as! MovieCollectionCell
+        
+        let movie = movies[indexPath.row]
+        let baseUrl = "http://image.tmdb.org/t/p/w500"
+        if let posterPath = movie["poster_path"] as? String{
+            let imageUrl = NSURL(string: baseUrl + posterPath)
+            cell.posterImage.setImageWithURL(imageUrl!)
+        }
+        
+        return cell
     }
 
 }
